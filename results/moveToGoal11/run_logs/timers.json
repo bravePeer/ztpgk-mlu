@@ -1,0 +1,42 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1779904036",
+        "python_version": "3.10.7 (tags/v3.10.7:6cc6b13, Sep  5 2022, 14:08:36) [MSC v.1933 64 bit (AMD64)]",
+        "command_line_arguments": "c:\\ml-agents-points-collection\\.venv\\Scripts\\mlagents-learn config\\moveToGoal.yaml --run-id=moveToGoal11 --time-scale=1 --train --force",
+        "mlagents_version": "1.1.0",
+        "mlagents_envs_version": "1.1.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "2.4.1+cpu",
+        "numpy_version": "1.23.5",
+        "end_time_seconds": "1779904104"
+    },
+    "total": 67.63976340000045,
+    "count": 1,
+    "self": 0.011723799998435425,
+    "children": {
+        "run_training.setup": {
+            "total": 0.09928710000167484,
+            "count": 1,
+            "self": 0.09928710000167484
+        },
+        "TrainerController.start_learning": {
+            "total": 67.52875250000034,
+            "count": 1,
+            "self": 0.000119099999210448,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 67.5286130000004,
+                    "count": 1,
+                    "self": 67.5286130000004
+                },
+                "TrainerController._save_models": {
+                    "total": 2.0400000721565448e-05,
+                    "count": 1,
+                    "self": 2.0400000721565448e-05
+                }
+            }
+        }
+    }
+}
