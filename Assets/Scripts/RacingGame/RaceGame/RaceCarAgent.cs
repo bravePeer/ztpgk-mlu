@@ -280,7 +280,7 @@ public class RaceCarAgent : Agent
     // Update is called once per frame
     void Update()
     {
-
+        _carControl.showSensorRays();
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)

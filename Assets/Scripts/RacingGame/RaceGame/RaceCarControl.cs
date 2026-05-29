@@ -82,7 +82,7 @@ public class RaceCarControl : MonoBehaviour
 
     public void resetPosition()
     {
-        gameObject.transform.localPosition = new Vector3(3.0f, 3.0f, 6.0f);
+        gameObject.transform.localPosition = new Vector3(0.0f, 5.0f, 0.0f);
         gameObject.transform.localRotation = new UnityEngine.Quaternion(0, 0, 0, 1);
     }
     //public Vector2 NormalizedPosition
@@ -184,9 +184,10 @@ public class RaceCarControl : MonoBehaviour
         Vector3 localVelocity = transform.InverseTransformDirection(_Rigidbody.linearVelocity);
         return(localVelocity.z < 0.0f);
     }
-    private void showSensorRays()
+    public void showSensorRays()
     {
         
-        Debug.DrawRay(leftPos, leftDir);
+        Debug.DrawRay(leftPos, leftDir*50);
+        Debug.DrawRay(rightPos, rightDir*50);
     }
 }
