@@ -17,7 +17,7 @@ public class RaceCarAgent : Agent
     [SerializeField] private PhysicsMaterial _wetMaterial;
     [SerializeField] private PhysicsMaterial _iceMaterial;
     [SerializeField] private GameObject _floor;
-
+    int randomMat=0;
     [Header("Rewards")]
     [SerializeField] private float _winReward = 10.0f;
     [SerializeField] private float _loseReward = -10.0f;
@@ -56,6 +56,20 @@ public class RaceCarAgent : Agent
         UpdateNearestCheckpoint();
         _currentIterations = 0;
         _carControl.resetPosition();
+
+        randomMat = UnityEngine.Random.Range(0, 3);
+        if (randomMat == 0)
+        {
+            _floor.GetComponent<Collider>().sharedMaterial = _dryMaterial;
+        }
+        else if (randomMat == 1)
+        {
+            _floor.GetComponent<Collider>().sharedMaterial = _wetMaterial;
+        }
+        else
+        {
+            _floor.GetComponent<Collider>().sharedMaterial = _iceMaterial;
+        }
     }
 
 
@@ -96,6 +110,9 @@ public class RaceCarAgent : Agent
         sensor.AddObservation(_carControl.isGoingBackwards());
         sensor.AddObservation(getDirectionToCheckpoint());
         sensor.AddObservation(transform.forward);
+        sensor.AddObservation(randomMat==0);
+        sensor.AddObservation(randomMat==1);
+        sensor.AddObservation(randomMat==2);
 
 
     }

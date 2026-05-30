@@ -13730,7 +13730,7 @@ MonoBehaviour:
   _speedReward: 0.001
   _goingBackwardsReward: -0.5
   _checkpointCheckReward: 1
-  _maxIterations: 2200
+  _maxIterations: 3000
   _currentIterations: 0
   nearestCheckpointPos: {x: 0, y: 0, z: 0}
 --- !u!114 &1477279436
@@ -13746,7 +13746,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 11
+    VectorObservationSize: 14
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 3
