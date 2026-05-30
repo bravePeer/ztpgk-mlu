@@ -2,49 +2,99 @@ using UnityEngine;
 
 public class experimental : MonoBehaviour
 {
-    public GameObject fl;
-    public GameObject fr;
-    public GameObject rr;
-    public GameObject rl;
+    [Header("Wheels")]
+    public WheelCollider fl;
+    public WheelCollider fr;
+    public WheelCollider rr;
+    public WheelCollider rl;
 
+    [Header("Physics Materials")]
+    public PhysicsMaterial dryMaterial;
+    public PhysicsMaterial wetMaterial;
+    public PhysicsMaterial iceMaterial;
 
-    private float turn;
+    [Header("Friction Stiffness Settings")]
+    [Tooltip("Mnoï¿½nik przyczepnoï¿½ci na suchej nawierzchni (standardowo 1.0)")]
+    public float dryStiffness = 1.0f;
+    [Tooltip("Mnoï¿½nik przyczepnoï¿½ci na mokrej nawierzchni")]
+    public float wetStiffness = 0.7f;
+    [Tooltip("Mnoï¿½nik przyczepnoï¿½ci na lodzie")]
+    public float iceStiffness = 0.25f;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    private float horizontalInput;
+    private float verticalInput;
 
-    // Update is called once per frame
     void Update()
     {
         getInput();
+    }
 
-        // Skrêcanie kó³ w lewo i prawo
-        if (turn != 0)
+    void getInput()
+    {
+        horizontalInput = Input.GetAxis("Horizontal");
+        verticalInput = Input.GetAxis("Vertical");
+    }
+
+    void FixedUpdate()
+    {
+        // Poruszanie i skrï¿½canie
+        fl.motorTorque = verticalInput * 1000;
+        fr.motorTorque = verticalInput * 1000;
+        rr.motorTorque = verticalInput * 1000;
+        rl.motorTorque = verticalInput * 1000;
+
+        fl.steerAngle = horizontalInput * 30;
+        fr.steerAngle = horizontalInput * 30;
+
+        // Aktualizacja tarcia dla kaï¿½dego koï¿½a osobno
+        UpdateWheelFriction(fl);
+        UpdateWheelFriction(fr);
+        UpdateWheelFriction(rr);
+        UpdateWheelFriction(rl);
+    }
+
+    void UpdateWheelFriction(WheelCollider wheel)
+    {
+        WheelHit hit;
+        // Sprawdzamy, czy koï¿½o w ogï¿½le dotyka podï¿½oï¿½a
+        if (wheel.GetGroundHit(out hit))
         {
-            
-            Vector3 currentLocalEulerFL = fl.transform.localRotation.eulerAngles;
-            fl.transform.localRotation = Quaternion.Euler(currentLocalEulerFL.x, turn * 30, currentLocalEulerFL.z);
+            PhysicsMaterial surfaceMat = hit.collider.sharedMaterial;
 
-            Vector3 currentLocalEulerFR = fr.transform.localRotation.eulerAngles;
-            fr.transform.localRotation = Quaternion.Euler(currentLocalEulerFR.x, turn * 30, currentLocalEulerFR.z);
+            if (surfaceMat != null)
+            {
+                // Porï¿½wnujemy materiaï¿½ podï¿½oï¿½a z przypisanymi w Inspectorze
+                if (surfaceMat == dryMaterial)
+                {
+                    SetWheelStiffness(wheel, dryStiffness);
+                }
+                else if (surfaceMat == wetMaterial)
+                {
+                    SetWheelStiffness(wheel, wetStiffness);
+                }
+                else if (surfaceMat == iceMaterial)
+                {
+                    SetWheelStiffness(wheel, iceStiffness);
+                }
+                else
+                {
+                    // Domyï¿½lna wartoï¿½ï¿½, jeï¿½li podï¿½oï¿½e ma inny materiaï¿½
+                    SetWheelStiffness(wheel, 1.0f);
+                }
+            }
         }
     }
-    private void getInput()
+
+    void SetWheelStiffness(WheelCollider wheel, float stiffness)
     {
-        if (Input.GetKey(KeyCode.A))
-        {
-            turn = -1;
-        }
-        else if (Input.GetKey(KeyCode.D))
-        {
-            turn = 1;
-        }
-        else
-        {
-            turn = 0;
-        }
+        // Zmiana tarcia wzdï¿½uï¿½nego (jazda/hamowanie)
+        WheelFrictionCurve forwardFriction = wheel.forwardFriction;
+        forwardFriction.stiffness = stiffness;
+        wheel.forwardFriction = forwardFriction;
+
+        // Zmiana tarcia bocznego (skrï¿½canie/drift)
+        WheelFrictionCurve sidewaysFriction = wheel.sidewaysFriction;
+        sidewaysFriction.stiffness = stiffness;
+        wheel.sidewaysFriction = sidewaysFriction;
     }
 }

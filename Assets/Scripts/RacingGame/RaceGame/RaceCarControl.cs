@@ -1,193 +1,142 @@
-//using UnityEngine;
-
-//public class RaceCarControl : MonoBehaviour
-//{
-//    // Start is called once before the first execution of Update after the MonoBehaviour is created
-//    void Start()
-//    {
-
-//    }
-
-//    // Update is called once per frame
-//    void Update()
-//    {
-
-//    }
-//}
-
-
 using System;
-using System.Numerics;
-using Unity.Mathematics;
 using UnityEngine;
-using Vector3 = UnityEngine.Vector3;
-using Vector2 = UnityEngine.Vector2;
 
 public class RaceCarControl : MonoBehaviour
 {
+    [Header("Wheels")]
+    public WheelCollider fl;
+    public WheelCollider fr;
+    public WheelCollider rr;
+    public WheelCollider rl;
+
+    [Header("Physics Materials")]
+    public PhysicsMaterial dryMaterial;
+    public PhysicsMaterial wetMaterial;
+    public PhysicsMaterial iceMaterial;
+
+    [Header("Friction Stiffness Settings")]
+    public float dryStiffness = 1.0f;
+    public float wetStiffness = 0.7f;
+    public float iceStiffness = 0.25f;
+
     [Header("Settings")]
-    [Range(0.0f, 5.0f)][SerializeField] private float _moveSpeed = 5.0f;
-    [SerializeField] private float _maxSpeed = 40;
-
-    [Space]
-    [SerializeField] private Vector2 _turnRange = new Vector2(-7, 7);
-    [SerializeField] private Vector2 _throttle = new Vector2(-1, 1);
-
+    [SerializeField] private float _maxSpeed = 40f;
     [SerializeField] public Rigidbody _Rigidbody = null;
 
     [Header("Sensors")]
     [SerializeField] public Transform _distSensor;
     [SerializeField] public Transform _distSensorLeft;
     [SerializeField] public Transform _distSensorRight;
-    private Vector3 leftDir;
-    private Vector3 leftPos;
-    private Vector3 rightDir;
-    private Vector3 rightPos;
-    private Vector3 centerDir;
-    private Vector3 centerPos;
-
-
-
-    private float throttleInput;
-    private float turnInput;
 
     private void Start()
     {
-        leftDir = _distSensorLeft.forward;
-        leftPos = _distSensorLeft.position;
-        rightDir = _distSensorRight.forward;
-        rightPos = _distSensorRight.position;
-        centerDir = _distSensor.forward;
-        centerPos = _distSensor.position;
+        if (_Rigidbody == null) _Rigidbody = GetComponent<Rigidbody>();
     }
 
     public void Update()
     {
-        leftDir = _distSensorLeft.forward;
-        leftPos = _distSensorLeft.position;
-        rightDir = _distSensorRight.forward;
-        rightPos = _distSensorRight.position;
-        centerDir = _distSensor.forward;
-        centerPos = _distSensor.position;
-        getInput();
-        //Move(turnInput, throttleInput);
-        //ApplySidewaysFriction();
         showSensorRays();
+        getInput();
     }
-    private void FixedUpdate()
+    void getInput()
     {
-        Move(turnInput, throttleInput);
-        ApplySidewaysFriction();
+        float turn = Input.GetAxis("Horizontal");
+        float throttle = Input.GetAxis("Vertical");
+        //Move(turn, throttle);
+    }
+    // Ta metoda jest teraz jedynym miejscem, które porusza samochodem!
+    public void Move(float turn, float throttle)
+    {
+        // 1. Poruszanie i skręcanie (koła)
+        fl.motorTorque = throttle * 1000f;
+        fr.motorTorque = throttle * 1000f;
+        rr.motorTorque = throttle * 1000f;
+        rl.motorTorque = throttle * 1000f;
+
+        fl.steerAngle = turn * 30f;
+        fr.steerAngle = turn * 30f;
+
+        // 2. Aktualizacja tarcia na podstawie nawierzchni
+        UpdateWheelFriction(fl);
+        UpdateWheelFriction(fr);
+        UpdateWheelFriction(rr);
+        UpdateWheelFriction(rl);
+    }
+
+    void UpdateWheelFriction(WheelCollider wheel)
+    {
+        WheelHit hit;
+        if (wheel.GetGroundHit(out hit))
+        {
+            PhysicsMaterial surfaceMat = hit.collider.sharedMaterial;
+            if (surfaceMat != null)
+            {
+                if (surfaceMat == dryMaterial) SetWheelStiffness(wheel, dryStiffness);
+                else if (surfaceMat == wetMaterial) SetWheelStiffness(wheel, wetStiffness);
+                else if (surfaceMat == iceMaterial) SetWheelStiffness(wheel, iceStiffness);
+                else SetWheelStiffness(wheel, 1.0f);
+            }
+        }
+    }
+
+    void SetWheelStiffness(WheelCollider wheel, float stiffness)
+    {
+        WheelFrictionCurve forwardFriction = wheel.forwardFriction;
+        forwardFriction.stiffness = stiffness;
+        wheel.forwardFriction = forwardFriction;
+
+        WheelFrictionCurve sidewaysFriction = wheel.sidewaysFriction;
+        sidewaysFriction.stiffness = stiffness;
+        wheel.sidewaysFriction = sidewaysFriction;
     }
 
     public void resetPosition()
     {
         gameObject.transform.localPosition = new Vector3(0.0f, 5.0f, 0.0f);
-        gameObject.transform.localRotation = new UnityEngine.Quaternion(0, 0, 0, 1);
-    }
-    //public Vector2 NormalizedPosition
-    //{
-    //    get
-    //    {
-    //        return Normalization.NormalizeVector2(
-    //               new Vector2(transform.localPosition.x, transform.localPosition.z),
-    //               new Vector2(_xAxisRange.x, _zAxisRange.x),
-    //               new Vector2(_xAxisRange.y, _zAxisRange.y)
-    //           );
-    //    }
-    //}
-    private void getInput()
-    {
-        turnInput = Input.GetAxis("Horizontal");
-        throttleInput = Input.GetAxis("Vertical");
-    }
-    public void Move(float turn, float throttle)
-    {
-        float forwardSpeed = Vector3.Dot(_Rigidbody.linearVelocity, transform.forward);
-
-        // Poruszanie
-        if (_Rigidbody.linearVelocity.magnitude < _maxSpeed) _Rigidbody.AddRelativeForce(Vector3.forward * Math.Clamp(throttle, -_throttle.y, _throttle.y) * 10f * _moveSpeed, ForceMode.Acceleration);
-        
-
-        // Skręcanie
-        if (Mathf.Abs(turn) > 0.1f)
+        gameObject.transform.localRotation = Quaternion.identity;
+        if (_Rigidbody != null)
         {
-            //// Gracz skręca - dodajemy siłę
-            //float turnSpeed = Convert.ToInt32(throttle!=0) * turn * forwardSpeed * (_moveSpeed /* * 0.1f*/);
-            //turnSpeed = Mathf.Clamp(turnSpeed, -_turnRange.y, _turnRange.y);
-            //_Rigidbody.AddRelativeTorque(Vector3.up * turnSpeed * 10, ForceMode.Acceleration);
-
-            // Gracz skręca - dodajemy siłę
-            float turnSpeed = /*Convert.ToInt32(throttle!=0) **/ Math.Clamp(turn, _turnRange.x, _turnRange.y) * forwardSpeed * (_moveSpeed * 0.7f);
-            //turnSpeed = turnSpeed, -_turnRange.y, _turnRange.y);
-            _Rigidbody.AddRelativeTorque(Vector3.up * turnSpeed, ForceMode.Acceleration);
-        }
-        else
-        {
-            // Gracz puścił kierownicę - aktywnie wygaszamy rotację (tzw. Counter-Torque)
-            // Im większa wartość (np. 5.0f), tym szybciej auto "prostuje" tor jazdy
-            _Rigidbody.angularVelocity = Vector3.Lerp(_Rigidbody.angularVelocity, Vector3.zero, Time.fixedDeltaTime * 5.0f);
+            _Rigidbody.linearVelocity = Vector3.zero;
+            _Rigidbody.angularVelocity = Vector3.zero;
         }
     }
-    [Header("Ustawienia Przyczepności")]
-    public float gripForce = 10f; // Jak mocno auto trzyma się bocznie (0 = lód, 20+ = wyścigówka)
 
-    private void ApplySidewaysFriction()
+    public float[] distanceToWall()
     {
-        // 1. Obliczamy prędkość boczną (relative sideways velocity)
-        // transform.right to oś "bok-bok" naszej kostki
-        Vector3 sidewaysVelocity = transform.right * Vector3.Dot(_Rigidbody.linearVelocity, transform.right);
-
-        // 2. Nakładamy siłę przeciwną do prędkości bocznej
-        // To "zabija" ruch w bok, symulując tarcie opon
-        _Rigidbody.AddForce(-sidewaysVelocity * gripForce, ForceMode.Acceleration);
-    }
-
-    //public void SetPosition(Vector2 position)
-    //{
-    //    transform.localPosition = new Vector3(
-    //            Mathf.Clamp(position.x, _xAxisRange.x, _xAxisRange.y),
-    //            0.0f,
-    //            Mathf.Clamp(position.y, _zAxisRange.x, _zAxisRange.y)
-    //    );
-    //}
-
-    public float[] distanceToWall()//znormalizowane
-    {
-        
         float[] distance = new float[3];
         float maxDistance = 50f;
 
-        // Tworzymy tablicę promieni, aby łatwo iterować po nich w pętli
         Ray[] rays = new Ray[]
         {
-            new Ray(leftPos, leftDir),
-            new Ray(rightPos, rightDir),
-            new Ray(centerPos, centerDir)
+            new Ray(_distSensorLeft.position, _distSensorLeft.forward),
+            new Ray(_distSensorRight.position, _distSensorRight.forward),
+            new Ray(_distSensor.position, _distSensor.forward)
         };
 
         for (int i = 0; i < rays.Length; i++)
         {
             RaycastHit hit;
-            // Jeśli trafimy, zapisz odległość, w przeciwnym wypadku daj maxDistance
             distance[i] = Physics.Raycast(rays[i], out hit, maxDistance) ? hit.distance : maxDistance;
             distance[i] = distance[i] / maxDistance;
         }
         return distance;
     }
-    public float getVelocity()//znormalizowane
+
+    public float getVelocity()
     {
-        return _Rigidbody.linearVelocity.magnitude/_maxSpeed;
+        return _Rigidbody.linearVelocity.magnitude / _maxSpeed;
     }
+
     public bool isGoingBackwards()
     {
         Vector3 localVelocity = transform.InverseTransformDirection(_Rigidbody.linearVelocity);
-        return(localVelocity.z < 0.0f);
+        return (localVelocity.z < -0.1f);
     }
+
     public void showSensorRays()
     {
-        
-        Debug.DrawRay(leftPos, leftDir*50);
-        Debug.DrawRay(rightPos, rightDir*50);
+        Debug.DrawRay(_distSensorLeft.position, _distSensorLeft.forward * 50, Color.red);
+        Debug.DrawRay(_distSensorRight.position, _distSensorRight.forward * 50, Color.red);
+        Debug.DrawRay(_distSensor.position, _distSensor.forward * 50, Color.blue);
     }
 }

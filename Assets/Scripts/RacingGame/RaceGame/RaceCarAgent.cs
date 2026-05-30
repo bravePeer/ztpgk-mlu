@@ -9,9 +9,14 @@ using UnityEngine;
 public class RaceCarAgent : Agent
 {
 
-    [Header("Space Ship References")]
+    [Header("Race Car References")]
     private RaceCarControl _carControl;
     private RaceCarState _carState;
+    [Header("Floor and physics materials")]
+    [SerializeField] private PhysicsMaterial _dryMaterial;
+    [SerializeField] private PhysicsMaterial _wetMaterial;
+    [SerializeField] private PhysicsMaterial _iceMaterial;
+    [SerializeField] private GameObject _floor;
 
     [Header("Rewards")]
     [SerializeField] private float _winReward = 10.0f;
@@ -29,11 +34,16 @@ public class RaceCarAgent : Agent
     [SerializeField] private float _checkpointCheckReward = 1.0f;
 
     [Header("Iterations")]
-    [SerializeField] private int _maxIterations = 2200;
+    [SerializeField] private int _maxIterations = 3000;
     [SerializeField] private int _currentIterations = 0;
 
-
+    private float turn =0, throttle = 0;
     public override void OnEpisodeBegin()
+    {
+        resetLevel();
+    }
+
+    public void resetLevel()
     {
         activeLocalCheckpoints.Clear();
 
@@ -43,19 +53,10 @@ public class RaceCarAgent : Agent
             activeLocalCheckpoints.Add(cp); // Dodajemy z powrotem do aktywnej listy
         }
 
-        // Reset pozycji agenta...
-        //transform.localPosition = new Vector3(0, 0.5f, 0);
-
-        // ZnajdŸ najbli¿szy na sam start
         UpdateNearestCheckpoint();
-
-        _carState.ResetPoints();
         _currentIterations = 0;
         _carControl.resetPosition();
-        //List<Vector2> positions = GenerateVariousPoints(5, 1.5f);
-        //_shipControl.SetPosition(positions[0]);
     }
-
 
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -73,19 +74,14 @@ public class RaceCarAgent : Agent
         AddReward(_timeReward);
 
         _currentIterations++;
-        //if (_currentIterations > _maxIterations || false)
-        //{
-        //    FinishEpisode(false);
-        //    return;
-        //}
+        if (_currentIterations > _maxIterations)
+        {
+            FinishEpisode(false);
+            return;
+        }
 
-        //int moveX = actions.DiscreteActions[0] - 1;
-        //int moveZ = actions.DiscreteActions[1] - 1;
-        float turn = actions.ContinuousActions[0];
-        float throttle = actions.ContinuousActions[1];
-        _carControl.Move(turn, throttle);
-
-        //Debug.Log("NAGRODA: " + GetCumulativeReward()+/*" distanes: " + _carControl.distanceToWall()[0]+", "+ _carControl.distanceToWall()[1] + ", "+ _carControl.distanceToWall()[2] + ", " + "|"+_carControl.isGoingBackwards()*/);
+        turn = actions.ContinuousActions[0];
+        throttle = actions.ContinuousActions[1];
     }
 
     // Observations
@@ -102,23 +98,6 @@ public class RaceCarAgent : Agent
         sensor.AddObservation(transform.forward);
 
 
-        // Current score [1]
-        //sensor.AddObservation(_carState.NormalizedPoints);
-
-        // 2 x Valid target [2] + 2 x Invalid target [2] 
-        // [8] Observations
-        //try
-        //{
-        //    sensor.AddObservation(_validTargets[0].NormalizedPosition);
-        //    sensor.AddObservation(_validTargets[1].NormalizedPosition);
-
-        //    sensor.AddObservation(_invalidTargets[0].NormalizedPosition);
-        //    sensor.AddObservation(_invalidTargets[1].NormalizedPosition);
-        //}
-        //catch (IndexOutOfRangeException ex)
-        //{
-        //    Debug.LogError(ex.Message);
-        //}
     }
 
     private void OnTriggerEnter(Collider other)
@@ -137,52 +116,26 @@ public class RaceCarAgent : Agent
         {
             AddReward(_checkpointCheckReward);
 
-            // 1. Zamiast Destroy, WY£¥CZAMY obiekt. Agent ju¿ w niego nie wejdzie.
             other.gameObject.SetActive(false);
 
-            // 2. USUWAMY go z listy aktywnych checkpointów
             activeLocalCheckpoints.Remove(other.transform);
 
-            // 3. Aktualizujemy cel (znajdzie kolejny najbli¿szy z tych, co zosta³y)
             UpdateNearestCheckpoint();
         }
 
-    //// Collect valid target
-    //if (other.CompareTag()
-    //{
-    //    SetReward(_collectValidTargetPoints);
-    //    validTarget.SetPosition(GenerateVariousPoints(1, 0.0f)[0]);
-    //    _shipState.AddPoints(1);
-    //}
 
-    //// Collect invalid target
-    //if (other.TryGetComponent<VirusTarget>(out VirusTarget invalidTarget))
-    //{
-    //    SetReward(_collectInvalidTargetPoints);
-    //    invalidTarget.SetPosition(GenerateVariousPoints(1, 0.0f)[0]);
-    //    _shipState.AddPoints(-1);
-    //}
     }
     private void OnCollisionEnter(Collision collision)
     {
         int walls = LayerMask.NameToLayer("Walls");
-        // Sprawdzamy, czy warstwa opuszczaj¹cego obiektu zgadza siê z naszym ID
         if (collision.gameObject.layer == walls)
         {
-            //AddReward(_wallHitReward);
-            //AddReward(_wallHitReward);
             FinishEpisode(false);
         }
         return;
-        //else
-        //{
-        //    AddReward(_wallNotHitReward);
-        //}
     }
     private void FinishEpisode(bool wonEpisode)
     {
-        _carState.ResetPoints();
-
         if (wonEpisode)
         {
             //_colorNotifier.OnEpisodeWon();
@@ -198,8 +151,6 @@ public class RaceCarAgent : Agent
         //_labelDisplayer.DisplayRewards(GetCumulativeReward());
         EndEpisode();
     }
-    //public override void Heuristic(in ActionBuffers actionsOut)
-    //{ }
 
     public Vector3 nearestCheckpointPos;
 
@@ -257,17 +208,6 @@ public class RaceCarAgent : Agent
 
 
 
-
-
-
-
-
-
-
-
-
-
-
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Start()
     {
@@ -281,6 +221,12 @@ public class RaceCarAgent : Agent
     void Update()
     {
         _carControl.showSensorRays();
+        //_carControl.Move(0.0f, 1.0f);
+    }
+
+    private void FixedUpdate()
+    {
+        _carControl.Move(turn, throttle);
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
